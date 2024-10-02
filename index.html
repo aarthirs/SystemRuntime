@@ -1,0 +1,170 @@
+<html>
+
+<head>
+    <title>Runtime and Downtime Graph</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://code.highcharts.com/highcharts.js"></script>
+    <script src="https://code.highcharts.com/modules/xrange.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+
+        .container {
+            width: 100%;
+            border: 1px solid #ccc;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            font-size: 18px;
+            font-weight: bold;
+            padding: 10px 0;
+            border-bottom: 1px solid #ccc;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">RUN HOURS AND DOWNTIME</div>
+        <div id="container" style="height: 400px; margin: 0 auto"></div>
+    </div>
+
+    <script>
+        // Sample JSON data
+        const data = [{
+                time: '07:00',
+                status: 1
+            },
+            {
+                time: '07:05',
+                status: 1
+            },
+            {
+                time: '07:10',
+                status: 0
+            },
+            {
+                time: '07:15',
+                status: 1
+            },
+            {
+                time: '07:20',
+                status: 0
+            },
+            {
+                time: '07:25',
+                status: 1
+            },
+            {
+                time: '07:30',
+                status: 0
+            },
+            {
+                time: '07:35',
+                status: 1
+            },
+
+            // ...
+        ];
+
+        // Convert time to Date object
+        //This function converts the time string (e.g., '07:00') into a JavaScript Date object for easier manipulation and plotting.
+        function parseTime(time) {
+            const [hours, minutes] = time.split(':').map(Number);
+            const date = new Date();
+            date.setHours(hours, minutes, 0, 0);
+            return date;
+        }
+
+        // Prepare data for Highcharts
+        const seriesData = data.map((point, index) => {
+            const startTime = parseTime(point.time).getTime();
+            const endTime = startTime + 5 * 60 * 1000; // 5 minutes later
+            return {
+                x: startTime,
+                x2: endTime,
+                y: 0, //Y-axis position (fixed at 0 for horizontal bands).
+                color: point.status === 1 ? '#6b8e23' : '#ff6347',
+                status: point.status // The status is stored to be used in tooltips and data labels.
+            };
+        });
+
+        // Initialize Highcharts
+        Highcharts.chart('container', {
+            chart: {
+                type: 'xrange'
+            },
+            title: {
+                text: ''
+            },
+            xAxis: { //creates plot bands
+                type: 'datetime',
+                tickInterval: 3600 * 1000, // 1 hour
+                labels: {
+                    format: '{value:%H:%M}'
+                },
+                plotBands: [{
+                    from: Date.UTC(1970, 0, 1, 7, 0),
+                    to: Date.UTC(1970, 0, 1, 19, 0),
+                    color: 'rgba(68, 170, 213, 0.1)',
+                    label: {
+                        text: 'Shift 1',
+                        align: 'center',
+                        verticalAlign: 'top',
+                        y: 10
+                    }
+                }, {
+                    from: Date.UTC(1970, 0, 1, 19, 0),
+                    to: Date.UTC(1970, 0, 2, 7, 0),
+                    color: 'rgba(0, 0, 0, 0.1)',
+                    label: {
+                        text: 'Shift 2',
+                        align: 'center',
+                        verticalAlign: 'top',
+                        y: 10
+                    }
+                }]
+            },
+            yAxis: {
+                title: {
+                    text: ''
+                },
+                categories: [''],
+                min: 0,
+                max: 1,
+                labels: {
+                    enabled: false
+                }
+            },
+            tooltip: {
+                formatter: function() {
+                    const startTime = Highcharts.dateFormat('%H:%M:%S %p', this.point.x);
+                    const endTime = Highcharts.dateFormat('%H:%M:%S %p', this.point.x2);
+                    const duration = (this.point.x2 - this.point.x) / (1000 * 60); // in minutes
+                    const hours = Math.floor(duration / 60);
+                    const minutes = duration % 60;
+                    const durationStr = `${hours}:${minutes < 10 ? '0' : ''}${minutes}`;
+                    return this.point.status === 0 ?
+                        `Downtime: ${durationStr} from ${startTime}` :
+                        `Runtime: ${durationStr} from ${startTime}`;
+                }
+            },
+            // Contains the seriesData, which controls the appearance of the green and red bands
+            series: [{
+                name: 'Machine Status',
+                data: seriesData,
+                dataLabels: {
+                    enabled: true,
+                    format: '{point.status}'
+                }
+            }]
+        });
+    </script>
+</body>
+
+</html>
